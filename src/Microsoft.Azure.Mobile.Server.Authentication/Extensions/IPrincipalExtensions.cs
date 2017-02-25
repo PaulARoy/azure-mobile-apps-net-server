@@ -36,21 +36,37 @@ namespace System.Security.Principal
             return principal.GetAppServiceIdentityAsync<T>(request, client);
         }
 
-        public static async Task<T> GetAppServiceIdentityAsync<T>(this IPrincipal principal, HttpRequestMessage request, HttpClient httpClient) where T : ProviderCredentials, new()
+        public static Task<T> GetAppServiceIdentityAsync<T>(this IPrincipal principal, HttpRequestMessage request, HttpClient httpClient) where T : ProviderCredentials, new()
         {
             if (request == null)
             {
                 throw new ArgumentNullException("request");
             }
+            // Get the token from the request
+            string zumoAuthToken = request.GetHeaderOrDefault("x-zumo-auth");
+            return principal.GetAppServiceIdentityAsync<T>(zumoAuthToken);
+        }
 
+        /// <summary>
+        /// Gets the identity provider specific identity details for the <see cref="IPrincipal"/> of the concerned ZUMO token.
+        /// </summary>
+        /// <param name="principal">The <see cref="IPrincipal"/> object.</param>
+        /// <param name="zumoAuthToken">The X-ZUMO-AUTH token.</param>
+        /// <typeparam name="T">The provider type.</typeparam>
+        /// <returns>The identity provider credentials if found, otherwise null.</returns>
+        public static Task<T> GetAppServiceIdentityAsync<T>(this IPrincipal principal, string zumoAuthToken) where T : ProviderCredentials, new()
+        {
+            return principal.GetAppServiceIdentityAsync<T>(zumoAuthToken, client);
+        }
+
+        public async static Task<T> GetAppServiceIdentityAsync<T>(this IPrincipal principal, string zumoAuthToken, HttpClient httpClient) where T : ProviderCredentials, new()
+        {
             ClaimsPrincipal user = principal as ClaimsPrincipal;
             if (user == null)
             {
                 throw new ArgumentOutOfRangeException(RResources.ParameterMustBeOfType.FormatInvariant("principal", typeof(ClaimsPrincipal).Name), (Exception)null);
             }
 
-            // Get the token from the request
-            string zumoAuthToken = request.GetHeaderOrDefault("x-zumo-auth");
             if (string.IsNullOrEmpty(zumoAuthToken))
             {
                 return null;
